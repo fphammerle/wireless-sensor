@@ -10,9 +10,6 @@ import typing
 import cc1101
 import numpy
 
-_MESSAGE_LENGTH_BITS = 65
-_MESSAGE_REPEATS = 3
-
 
 _MEASUREMENT_TYPE = collections.namedtuple(
     "measurement",
@@ -24,9 +21,12 @@ class FT017TH:
 
     # pylint: disable=too-few-public-methods
 
-    @staticmethod
-    def _parse_message(bits) -> _MEASUREMENT_TYPE:
-        assert bits.shape == (_MESSAGE_LENGTH_BITS,), bits.shape
+    _MESSAGE_LENGTH_BITS = 65
+    _MESSAGE_REPEATS = 3
+
+    @classmethod
+    def _parse_message(cls, bits) -> _MEASUREMENT_TYPE:
+        assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
             raise ValueError("invalid prefix in message: {}".format(bits))
         temperature_index, = struct.unpack(
@@ -63,9 +63,9 @@ class FT017TH:
         cls, signal: "numpy.ndarray(dtype=numpy.uint8)"
     ) -> _MEASUREMENT_TYPE:
         bits = numpy.unpackbits(signal)[
-            : _MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS
+            : cls._MESSAGE_LENGTH_BITS * cls._MESSAGE_REPEATS
         ]  # bitorder='big'
-        repeats_bits = numpy.split(bits, _MESSAGE_REPEATS)
+        repeats_bits = numpy.split(bits, cls._MESSAGE_REPEATS)
         # cc1101 might have skipped the first repeat
         if numpy.array_equal(repeats_bits[0], repeats_bits[1]) or numpy.array_equal(
             repeats_bits[0], repeats_bits[2]
@@ -90,7 +90,7 @@ class FT017TH:
         self.transceiver.enable_manchester_code()
         self.transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
         self.transceiver.set_packet_length_bytes(
-            math.ceil(_MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS / 8)
+            math.ceil(self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8)
             - len(self._SYNC_WORD)
         )
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
