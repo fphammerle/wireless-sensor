@@ -1,15 +1,10 @@
-import datetime
-import enum
-import json
 import logging
 import math
-import pathlib
 import struct
 import time
 import typing
 
 import cc1101
-import manchester_code
 import numpy
 
 _MESSAGE_LENGTH_BITS = 65
@@ -60,51 +55,53 @@ def _parse_message(bits) -> None:
     )
 
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s:%(levelname)s:%(message)s",
-    datefmt="%Y-%m-%dT%H:%M:%S%z",
-)
-logging.getLogger("cc1101").setLevel(logging.INFO)
-
-with cc1101.CC1101() as transceiver:
-    transceiver.set_base_frequency_hertz(433.945e6)
-    transceiver.set_symbol_rate_baud(2048)
-    transceiver.set_sync_mode(
-        cc1101.SyncMode.TRANSMIT_16_MATCH_15_BITS, _carrier_sense_threshold_enabled=True
+def _main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s:%(levelname)s:%(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
-    sync_word = bytes([255, 168])
-    transceiver.set_sync_word(sync_word)
-    transceiver.disable_checksum()
-    transceiver.enable_manchester_code()
-    transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
-    transceiver.set_packet_length_bytes(
-        math.ceil(_MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS / 8) - len(sync_word)
-    )
-    transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
-    # transceiver._write_burst(start_register=cc1101.ConfigurationRegisterAddress.PKTCTRL1, values=[0b00100100])
-    # mdmcfg2 = transceiver._read_single_byte(cc1101.ConfigurationRegisterAddress.MDMCFG2)
-    # mdmcfg2 |= 0b00000100
-    # transceiver._write_burst(cc1101.ConfigurationRegisterAddress.MDMCFG2, [mdmcfg2])
-    print(transceiver)
-    print(
-        "filter bandwidth: {:.0f} kHz".format(
-            transceiver._get_filter_bandwidth_hertz() / 1000
+    logging.getLogger("cc1101").setLevel(logging.INFO)
+    with cc1101.CC1101() as transceiver:
+        transceiver.set_base_frequency_hertz(433.945e6)
+        transceiver.set_symbol_rate_baud(2048)
+        transceiver.set_sync_mode(
+            cc1101.SyncMode.TRANSMIT_16_MATCH_15_BITS,
+            _carrier_sense_threshold_enabled=True,
         )
-    )
-    print("flushing...")
-    transceiver._command_strobe(cc1101.StrobeAddress.SFRX)
-    time.sleep(0.1)
-    while True:
-        transceiver._enable_receive_mode()
-        time.sleep(0.05)
-        while (
-            transceiver.get_marc_state() == cc1101.MainRadioControlStateMachineState.RX
-        ):
-            time.sleep(8.0)
-        packet = transceiver._get_received_packet()
-        if packet:
-            logging.debug("%s", packet)
-            _parse_transmission(
-                numpy.frombuffer(sync_word + packet.data, dtype=numpy.uint8)
+        sync_word = bytes([255, 168])
+        transceiver.set_sync_word(sync_word)
+        transceiver.disable_checksum()
+        transceiver.enable_manchester_code()
+        transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
+        transceiver.set_packet_length_bytes(
+            math.ceil(_MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS / 8) - len(sync_word)
+        )
+        transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
+        print(transceiver)
+        print(
+            "filter bandwidth: {:.0f} kHz".format(
+                transceiver._get_filter_bandwidth_hertz() / 1000
             )
+        )
+        print("flushing...")
+        transceiver._command_strobe(cc1101.StrobeAddress.SFRX)
+        time.sleep(0.1)
+        while True:
+            transceiver._enable_receive_mode()
+            time.sleep(0.05)
+            while (
+                transceiver.get_marc_state()
+                == cc1101.MainRadioControlStateMachineState.RX
+            ):
+                time.sleep(8.0)
+            packet = transceiver._get_received_packet()
+            if packet:
+                logging.debug("%s", packet)
+                _parse_transmission(
+                    numpy.frombuffer(sync_word + packet.data, dtype=numpy.uint8)
+                )
+
+
+if __name__ == "__main__":
+    _main()
