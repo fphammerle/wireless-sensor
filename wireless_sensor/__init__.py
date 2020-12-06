@@ -10,6 +10,7 @@ import typing
 import cc1101
 import numpy
 
+_LOGGER = logging.getLogger(__name__)
 
 _Measurement = collections.namedtuple(
     "measurement",
@@ -45,7 +46,7 @@ class FT017TH:
             ">H", numpy.packbits(bits[44:56])  # , bitorder="big")
         )
         relative_humidity = relative_humidity_index / 51451.432435
-        logging.debug(
+        _LOGGER.debug(
             "undecoded prefix %s, %.02f°C, %.01f%%, undecoded suffix %s",
             numpy.packbits(bits[8:32]),  # address & battery?
             temperature_degrees_celsius,
@@ -99,7 +100,7 @@ class FT017TH:
     def receive(self) -> typing.Iterator[_Measurement]:
         with self.transceiver:
             self._configure_transceiver()
-            logging.debug(
+            _LOGGER.debug(
                 "%s, filter_bandwidth=%.0fkHz",
                 self.transceiver,
                 # pylint: disable=protected-access; version pinned
@@ -118,7 +119,7 @@ class FT017TH:
                     self.transceiver._get_received_packet()
                 )
                 if packet:
-                    logging.debug("%s", packet)
+                    _LOGGER.debug("%s", packet)
                     try:
                         yield self._parse_transmission(
                             numpy.frombuffer(
@@ -126,25 +127,4 @@ class FT017TH:
                             )
                         )
                     except ValueError:
-                        logging.info("failed to decode %s", packet)
-
-
-def _main():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s:%(levelname)s:%(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S%z",
-    )
-    logging.getLogger("cc1101").setLevel(logging.INFO)
-    for measurement in FT017TH().receive():
-        print(
-            "{:%Y-%m-%dT%H:%M:%S%z}\t{:.01f}°C\t{:.01f}%".format(
-                measurement.decoding_timestamp,
-                measurement.temperature_degrees_celsius,
-                measurement.relative_humidity * 100,
-            )
-        )
-
-
-if __name__ == "__main__":
-    _main()
+                        _LOGGER.info("failed to decode %s", packet)
