@@ -1,4 +1,5 @@
 import abc
+import collections
 import datetime
 import logging
 import math
@@ -13,7 +14,10 @@ _MESSAGE_LENGTH_BITS = 65
 _MESSAGE_REPEATS = 3
 
 
-_MEASUREMENT_DATA_TYPE = typing.Dict[str, typing.Union[datetime.datetime, float]]
+_MEASUREMENT_TYPE = collections.namedtuple(
+    "measurement",
+    ["decoding_timestamp", "temperature_degrees_celsius", "relative_humidity"],
+)
 
 
 class FT017TH:
@@ -21,7 +25,7 @@ class FT017TH:
     # pylint: disable=too-few-public-methods
 
     @staticmethod
-    def _parse_message(bits) -> _MEASUREMENT_DATA_TYPE:
+    def _parse_message(bits) -> _MEASUREMENT_TYPE:
         assert bits.shape == (_MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
             raise ValueError("invalid prefix in message: {}".format(bits))
@@ -48,16 +52,16 @@ class FT017TH:
             relative_humidity * 100,
             bits[56:],  # checksum?
         )
-        return {
-            "decoding_timestamp": datetime.datetime.now(),
-            "temperature_degrees_celsius": temperature_degrees_celsius,
-            "relative_humidity": relative_humidity,
-        }
+        return _MEASUREMENT_TYPE(
+            decoding_timestamp=datetime.datetime.now(),
+            temperature_degrees_celsius=temperature_degrees_celsius,
+            relative_humidity=relative_humidity,
+        )
 
     @classmethod
     def _parse_transmission(
         cls, signal: "numpy.ndarray(dtype=numpy.uint8)"
-    ) -> _MEASUREMENT_DATA_TYPE:
+    ) -> _MEASUREMENT_TYPE:
         bits = numpy.unpackbits(signal)[
             : _MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS
         ]  # bitorder='big'
@@ -91,7 +95,7 @@ class FT017TH:
         )
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
-    def receive(self) -> typing.Iterator[_MEASUREMENT_DATA_TYPE]:
+    def receive(self) -> typing.Iterator[_MEASUREMENT_TYPE]:
         with self.transceiver:
             self._configure_transceiver()
             logging.debug(
@@ -127,8 +131,14 @@ def _main():
         datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
     logging.getLogger("cc1101").setLevel(logging.INFO)
-    for measurements in FT017TH().receive():
-        print(measurements)
+    for measurement in FT017TH().receive():
+        print(
+            "{}\t{:.01f}°C\t{:.01f}%".format(
+                measurement.decoding_timestamp.isoformat(),
+                measurement.temperature_degrees_celsius,
+                measurement.relative_humidity * 100,
+            )
+        )
 
 
 if __name__ == "__main__":
