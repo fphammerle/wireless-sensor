@@ -1,5 +1,6 @@
 import datetime
 import unittest.mock
+import queue
 
 import cc1101
 import numpy
@@ -87,3 +88,39 @@ def test__receive_packet():
         unittest.mock.call(8.0),
     ]
     assert packet == "dummy"
+
+
+def test_receive():
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    measurement_iter = sensor.receive()
+    packet = cc1101._ReceivedPacket(
+        data=b"\0", rssi_index=0, checksum_valid=True, link_quality_indicator=0
+    )
+    with unittest.mock.patch.object(sensor, "_receive_packet") as receive_packet_mock:
+        packet_queue = queue.Queue()
+        packet_queue.put(None)
+        packet_queue.put(None)
+        packet_queue.put(packet)
+        packet_queue.put(None)
+        packet_queue.put(packet)
+        receive_packet_mock.side_effect = packet_queue.get
+        with unittest.mock.patch.object(
+            sensor, "_parse_transmission", return_value="dummy"
+        ) as parse_transmission_mock:
+            assert next(measurement_iter) == "dummy"
+        sensor.transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
+        assert receive_packet_mock.call_count == 3
+        parse_transmission_mock.assert_called_once()
+        parse_transmission_args, parse_transmission_kwargs = (
+            parse_transmission_mock.call_args
+        )
+        assert not parse_transmission_kwargs
+        assert len(parse_transmission_args) == 1
+        assert numpy.array_equal(
+            parse_transmission_args[0], numpy.array([255, 168, 0], dtype=numpy.uint8)
+        )
+        with unittest.mock.patch.object(
+            sensor, "_parse_transmission", return_value="dummy2"
+        ):
+            assert next(measurement_iter) == "dummy2"
