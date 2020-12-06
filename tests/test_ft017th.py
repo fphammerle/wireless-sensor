@@ -1,5 +1,7 @@
 import datetime
+import unittest.mock
 
+import cc1101
 import numpy
 import pytest
 
@@ -61,3 +63,27 @@ def test__parse_transmission(signal, message_bits):
     assert numpy.array_equal(
         args[0], numpy.array([int(b) for b in message_bits], dtype=numpy.uint8)
     )
+
+
+def test__receive_packet():
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    with unittest.mock.patch("time.sleep") as sleep_mock:
+        sensor.transceiver.get_marc_state.side_effect = (
+            lambda: cc1101.MainRadioControlStateMachineState.RX
+            if sum(a[0] for a, _ in sleep_mock.call_args_list) < 16
+            else cc1101.MainRadioControlStateMachineState.IDLE
+        )
+        sensor.transceiver._get_received_packet.side_effect = (
+            lambda: "fail"
+            if sum(a[0] for a, _ in sleep_mock.call_args_list) < 16
+            else "dummy"
+        )
+        packet = sensor._receive_packet()
+    sensor.transceiver._enable_receive_mode.assert_called_once_with()  # pylint: disable=no-member; false positive
+    assert sleep_mock.call_args_list == [
+        unittest.mock.call(0.05),
+        unittest.mock.call(8.0),
+        unittest.mock.call(8.0),
+    ]
+    assert packet == "dummy"

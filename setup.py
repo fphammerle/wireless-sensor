@@ -15,7 +15,7 @@ setuptools.setup(
     author_email="fabian@hammerle.me",
     url=_REPO_URL,
     project_urls={"Changelog": _REPO_URL + "/blob/master/CHANGELOG.md"},
-    license="GPLv3+",
+    license="GPLv3+",  # TODO
     keywords=[
         "FT017TH",
         "IoT",

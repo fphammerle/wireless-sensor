@@ -97,6 +97,23 @@ class FT017TH:
         # pylint: disable=protected-access; version pinned
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
+    def _receive_packet(
+        self
+    ) -> typing.Optional[
+        cc1101._ReceivedPacket  # pylint: disable=protected-access; version pinned
+    ]:
+        self.transceiver._enable_receive_mode()  # pylint: disable=protected-access; version pinned
+        time.sleep(0.05)
+        while (
+            self.transceiver.get_marc_state()
+            == cc1101.MainRadioControlStateMachineState.RX
+        ):
+            time.sleep(8.0)  # transmits approx once per minute
+        return (
+            # pylint: disable=protected-access; version pinned
+            self.transceiver._get_received_packet()
+        )
+
     def receive(self) -> typing.Iterator[_Measurement]:
         with self.transceiver:
             self._configure_transceiver()
@@ -107,17 +124,7 @@ class FT017TH:
                 self.transceiver._get_filter_bandwidth_hertz() / 1000,
             )
             while True:
-                self.transceiver._enable_receive_mode()  # pylint: disable=protected-access; version pinned
-                time.sleep(0.05)
-                while (
-                    self.transceiver.get_marc_state()
-                    == cc1101.MainRadioControlStateMachineState.RX
-                ):
-                    time.sleep(8.0)  # transmits approx once per minute
-                packet = (
-                    # pylint: disable=protected-access; version pinned
-                    self.transceiver._get_received_packet()
-                )
+                packet = self._receive_packet()
                 if packet:
                     _LOGGER.debug("%s", packet)
                     try:
