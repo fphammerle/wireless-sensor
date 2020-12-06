@@ -91,13 +91,9 @@ def _parse_transmission(
     raise ValueError("repeats do not match")
 
 
-def _main():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s:%(levelname)s:%(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S%z",
-    )
-    logging.getLogger("cc1101").setLevel(logging.INFO)
+def receive_ft017th_measurements() -> typing.Iterator[
+    typing.Tuple[TemperatureMeasurement, RelativeHumidityMeasurement]
+]:
     with cc1101.CC1101() as transceiver:
         transceiver.set_base_frequency_hertz(433.945e6)
         transceiver.set_symbol_rate_baud(2048)
@@ -105,7 +101,7 @@ def _main():
             cc1101.SyncMode.TRANSMIT_16_MATCH_15_BITS,
             _carrier_sense_threshold_enabled=True,
         )
-        sync_word = bytes([255, 168])
+        sync_word = bytes([255, 168])  # 168 might be sender-specific
         transceiver.set_sync_word(sync_word)
         transceiver.disable_checksum()
         transceiver.enable_manchester_code()
@@ -114,15 +110,11 @@ def _main():
             math.ceil(_MESSAGE_LENGTH_BITS * _MESSAGE_REPEATS / 8) - len(sync_word)
         )
         transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
-        print(transceiver)
-        print(
-            "filter bandwidth: {:.0f} kHz".format(
-                transceiver._get_filter_bandwidth_hertz() / 1000
-            )
+        logging.debug(
+            "%s, filter_bandwidth=%.0fkHz",
+            transceiver,
+            transceiver._get_filter_bandwidth_hertz() / 1000,
         )
-        print("flushing...")
-        transceiver._command_strobe(cc1101.StrobeAddress.SFRX)
-        time.sleep(0.1)
         while True:
             transceiver._enable_receive_mode()
             time.sleep(0.05)
@@ -135,13 +127,22 @@ def _main():
             if packet:
                 logging.debug("%s", packet)
                 try:
-                    measurements = _parse_transmission(
+                    yield _parse_transmission(
                         numpy.frombuffer(sync_word + packet.data, dtype=numpy.uint8)
                     )
                 except ValueError:
                     logging.info("failed to decode %s", packet)
-                    continue
-                print(*measurements, sep="\t")
+
+
+def _main():
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s:%(levelname)s:%(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+    )
+    logging.getLogger("cc1101").setLevel(logging.INFO)
+    for measurements in receive_ft017th_measurements():
+        print(*measurements, sep="\t")
 
 
 if __name__ == "__main__":
