@@ -11,7 +11,7 @@ import cc1101
 import numpy
 
 
-_MEASUREMENT_TYPE = collections.namedtuple(
+_Measurement = collections.namedtuple(
     "measurement",
     ["decoding_timestamp", "temperature_degrees_celsius", "relative_humidity"],
 )
@@ -25,7 +25,7 @@ class FT017TH:
     _MESSAGE_REPEATS = 3
 
     @classmethod
-    def _parse_message(cls, bits) -> _MEASUREMENT_TYPE:
+    def _parse_message(cls, bits) -> _Measurement:
         assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
             raise ValueError("invalid prefix in message: {}".format(bits))
@@ -52,7 +52,7 @@ class FT017TH:
             relative_humidity * 100,
             bits[56:],  # checksum?
         )
-        return _MEASUREMENT_TYPE(
+        return _Measurement(
             decoding_timestamp=datetime.datetime.now().astimezone(),  # local timezone
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
@@ -60,8 +60,8 @@ class FT017TH:
 
     @classmethod
     def _parse_transmission(
-        cls, signal: "numpy.ndarray(dtype=numpy.uint8)"
-    ) -> _MEASUREMENT_TYPE:
+        cls, signal: numpy.ndarray  # dtype=numpy.uint8
+    ) -> _Measurement:
         bits = numpy.unpackbits(signal)[
             : cls._MESSAGE_LENGTH_BITS * cls._MESSAGE_REPEATS
         ]  # bitorder='big'
@@ -96,7 +96,7 @@ class FT017TH:
         # pylint: disable=protected-access; version pinned
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
-    def receive(self) -> typing.Iterator[_MEASUREMENT_TYPE]:
+    def receive(self) -> typing.Iterator[_Measurement]:
         with self.transceiver:
             self._configure_transceiver()
             logging.debug(
