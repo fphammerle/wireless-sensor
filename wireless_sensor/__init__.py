@@ -53,7 +53,7 @@ class FT017TH:
             bits[56:],  # checksum?
         )
         return _MEASUREMENT_TYPE(
-            decoding_timestamp=datetime.datetime.now(),
+            decoding_timestamp=datetime.datetime.now().astimezone(),  # local timezone
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
         )
@@ -133,8 +133,8 @@ def _main():
     logging.getLogger("cc1101").setLevel(logging.INFO)
     for measurement in FT017TH().receive():
         print(
-            "{}\t{:.01f}°C\t{:.01f}%".format(
-                measurement.decoding_timestamp.isoformat(),
+            "{:%Y-%m-%dT%H:%M:%S%z}\t{:.01f}°C\t{:.01f}%".format(
+                measurement.decoding_timestamp,
                 measurement.temperature_degrees_celsius,
                 measurement.relative_humidity * 100,
             )
