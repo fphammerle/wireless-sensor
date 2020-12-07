@@ -21,6 +21,7 @@ import datetime
 import logging
 import math
 import struct
+import sys
 import time
 import typing
 
@@ -37,6 +38,16 @@ _Measurement = collections.namedtuple(
 
 class DecodeError(ValueError):
     pass
+
+
+def _now_local() -> datetime.datetime:  # pragma: no cover
+    if sys.version_info < (3, 6):
+        return (
+            datetime.datetime.utcnow()
+            .replace(tzinfo=datetime.timezone.utc)
+            .astimezone()
+        )
+    return datetime.datetime.now().astimezone()
 
 
 class FT017TH:
@@ -75,7 +86,7 @@ class FT017TH:
             bits[56:],  # checksum?
         )
         return _Measurement(
-            decoding_timestamp=datetime.datetime.now().astimezone(),  # local timezone
+            decoding_timestamp=_now_local(),
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
         )
