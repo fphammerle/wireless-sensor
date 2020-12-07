@@ -42,11 +42,7 @@ class DecodeError(ValueError):
 
 def _now_local() -> datetime.datetime:  # pragma: no cover
     if sys.version_info < (3, 6):
-        return (
-            datetime.datetime.utcnow()
-            .replace(tzinfo=datetime.timezone.utc)
-            .astimezone()
-        )
+        return datetime.datetime.now(tz=datetime.timezone.utc).astimezone()
     return datetime.datetime.now().astimezone()
 
 
