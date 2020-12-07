@@ -85,7 +85,8 @@ def test__parse_transmission(signal, message_bits):
         wireless_sensor.FT017TH._parse_transmission(
             numpy.frombuffer(signal, dtype=numpy.uint8)
         )
-    parse_message_mock.assert_called_once()
+    # .assert_called_once() was added in python3.6
+    assert parse_message_mock.call_count == 1
     args, kwargs = parse_message_mock.call_args
     assert not kwargs
     assert len(args) == 1
@@ -153,7 +154,7 @@ def test_receive():
             assert next(measurement_iter) == "dummy"
         sensor.transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
         assert receive_packet_mock.call_count == 3
-        parse_transmission_mock.assert_called_once()
+        assert parse_transmission_mock.call_count == 1
         (
             parse_transmission_args,
             parse_transmission_kwargs,
