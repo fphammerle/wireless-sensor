@@ -154,9 +154,10 @@ def test_receive():
         sensor.transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
         assert receive_packet_mock.call_count == 3
         parse_transmission_mock.assert_called_once()
-        parse_transmission_args, parse_transmission_kwargs = (
-            parse_transmission_mock.call_args
-        )
+        (
+            parse_transmission_args,
+            parse_transmission_kwargs,
+        ) = parse_transmission_mock.call_args
         assert not parse_transmission_kwargs
         assert len(parse_transmission_args) == 1
         assert numpy.array_equal(
