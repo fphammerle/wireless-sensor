@@ -35,6 +35,10 @@ _Measurement = collections.namedtuple(
 )
 
 
+class DecodeError(ValueError):
+    pass
+
+
 class FT017TH:
 
     # pylint: disable=too-few-public-methods
@@ -46,7 +50,7 @@ class FT017TH:
     def _parse_message(cls, bits) -> _Measurement:
         assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
-            raise ValueError("invalid prefix in message: {}".format(bits))
+            raise DecodeError("invalid prefix in message: {}".format(bits))
         temperature_index, = struct.unpack(
             ">H", numpy.packbits(bits[32:44])  # , bitorder="big")
         )
@@ -89,7 +93,7 @@ class FT017TH:
             repeats_bits[0], repeats_bits[2]
         ):
             return cls._parse_message(repeats_bits[0])
-        raise ValueError("repeats do not match")
+        raise DecodeError("repeats do not match")
 
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
@@ -150,7 +154,7 @@ class FT017TH:
                                 self._SYNC_WORD + packet.data, dtype=numpy.uint8
                             )
                         )
-                    except ValueError as exc:
-                        _LOGGER.info(
+                    except DecodeError as exc:
+                        _LOGGER.debug(
                             "failed to decode %s: %s", packet, str(exc), exc_info=exc
                         )

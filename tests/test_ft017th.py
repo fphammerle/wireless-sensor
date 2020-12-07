@@ -62,7 +62,7 @@ def test__parse_message(bits, temperature_degrees_celsius, relative_humidity):
     "bits", ["11101111101010001011001100100000100011111110010111101100010000011"]
 )
 def test__parse_message_invalid_prefix(bits):
-    with pytest.raises(ValueError, match=r"\binvalid prefix\b"):
+    with pytest.raises(wireless_sensor.DecodeError, match=r"\binvalid prefix\b"):
         wireless_sensor.FT017TH._parse_message(
             numpy.array([int(b) for b in bits], dtype=numpy.uint8)
         )
@@ -102,7 +102,7 @@ def test__parse_transmission(signal, message_bits):
     ],
 )
 def test__parse_transmission_repeats_dont_match(signal):
-    with pytest.raises(ValueError, match=r"\brepeats do not match\b"):
+    with pytest.raises(wireless_sensor.DecodeError, match=r"\brepeats do not match\b"):
         wireless_sensor.FT017TH._parse_transmission(
             numpy.frombuffer(signal, dtype=numpy.uint8)
         )
@@ -182,12 +182,12 @@ def test_receive_failed_to_decode(caplog):
         sensor,
         "_parse_transmission",
         side_effect=[
-            ValueError("dummy error 0"),
-            ValueError("dummy error 1"),
+            wireless_sensor.DecodeError("dummy error 0"),
+            wireless_sensor.DecodeError("dummy error 1"),
             "dummy measurement",
         ],
     ) as parse_transmission_mock, caplog.at_level(
-        logging.INFO
+        logging.DEBUG
     ):
         assert next(measurement_iter) == "dummy measurement"
     assert receive_packet_mock.call_count == 3
@@ -195,7 +195,7 @@ def test_receive_failed_to_decode(caplog):
     decode_error_log_records = [
         (r.message, r.exc_info[1])
         for r in caplog.records
-        if r.name == "wireless_sensor" and r.funcName == "receive"
+        if r.name == "wireless_sensor" and r.funcName == "receive" and r.exc_info
     ]
     assert len(decode_error_log_records) == 2
     for error_index in range(2):
@@ -203,4 +203,6 @@ def test_receive_failed_to_decode(caplog):
             "failed to decode _ReceivedPacket(RSSI -74dBm, 0x00): "
             + "dummy error {}".format(error_index)
         )
-        assert isinstance(decode_error_log_records[error_index][1], ValueError)
+        assert isinstance(
+            decode_error_log_records[error_index][1], wireless_sensor.DecodeError
+        )
