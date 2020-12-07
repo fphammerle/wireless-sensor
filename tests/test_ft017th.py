@@ -42,6 +42,16 @@ def test__parse_message(bits, temperature_degrees_celsius, relative_humidity):
 
 
 @pytest.mark.parametrize(
+    "bits", ["11101111101010001011001100100000100011111110010111101100010000011"]
+)
+def test__parse_message_invalid_prefix(bits):
+    with pytest.raises(ValueError, match=r"\binvalid prefix\b"):
+        wireless_sensor.FT017TH._parse_message(
+            numpy.array([int(b) for b in bits], dtype=numpy.uint8)
+        )
+
+
+@pytest.mark.parametrize(
     ("signal", "message_bits"),
     [
         (
@@ -65,6 +75,20 @@ def test__parse_transmission(signal, message_bits):
     assert numpy.array_equal(
         args[0], numpy.array([int(b) for b in message_bits], dtype=numpy.uint8)
     )
+
+
+@pytest.mark.parametrize(
+    "signal",
+    [
+        b"\xff\xa8\xb3 \x90\x05\xef!\xff\xd4Y\x90G"
+        b"\x02\xf7\x90\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+    ],
+)
+def test__parse_transmission_repeats_dont_match(signal):
+    with pytest.raises(ValueError, match=r"\brepeats do not match\b"):
+        wireless_sensor.FT017TH._parse_transmission(
+            numpy.frombuffer(signal, dtype=numpy.uint8)
+        )
 
 
 def test__receive_packet():
