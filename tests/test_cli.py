@@ -33,17 +33,17 @@ import wireless_sensor._cli
 def test__receive(capsys, argv, root_log_level):
     with unittest.mock.patch("wireless_sensor.FT017TH") as sensor_class_mock:
         sensor_class_mock().receive.return_value = [
-            wireless_sensor._Measurement(
+            wireless_sensor.Measurement(
                 decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 0),
                 temperature_degrees_celsius=24.1234,
                 relative_humidity=0.51234,
             ),
-            wireless_sensor._Measurement(
+            wireless_sensor.Measurement(
                 decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 50),
                 temperature_degrees_celsius=22.42,
                 relative_humidity=0.55123,
             ),
-            wireless_sensor._Measurement(
+            wireless_sensor.Measurement(
                 decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 1, 41),
                 temperature_degrees_celsius=21.1234,
                 relative_humidity=0.61234,

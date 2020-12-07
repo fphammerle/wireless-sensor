@@ -30,8 +30,8 @@ import numpy
 
 _LOGGER = logging.getLogger(__name__)
 
-_Measurement = collections.namedtuple(
-    "measurement",
+Measurement = collections.namedtuple(
+    "Measurement",
     ["decoding_timestamp", "temperature_degrees_celsius", "relative_humidity"],
 )
 
@@ -54,7 +54,7 @@ class FT017TH:
     _MESSAGE_REPEATS = 3
 
     @classmethod
-    def _parse_message(cls, bits) -> _Measurement:
+    def _parse_message(cls, bits) -> Measurement:
         assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
             raise DecodeError("invalid prefix in message: {}".format(bits))
@@ -81,7 +81,7 @@ class FT017TH:
             relative_humidity * 100,
             bits[56:],  # checksum?
         )
-        return _Measurement(
+        return Measurement(
             decoding_timestamp=_now_local(),
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
@@ -90,7 +90,7 @@ class FT017TH:
     @classmethod
     def _parse_transmission(
         cls, signal: numpy.ndarray  # dtype=numpy.uint8
-    ) -> _Measurement:
+    ) -> Measurement:
         bits = numpy.unpackbits(signal)[
             : cls._MESSAGE_LENGTH_BITS * cls._MESSAGE_REPEATS
         ]  # bitorder='big'
@@ -142,7 +142,7 @@ class FT017TH:
             self.transceiver._get_received_packet()
         )
 
-    def receive(self) -> typing.Iterator[_Measurement]:
+    def receive(self) -> typing.Iterator[Measurement]:
         with self.transceiver:
             self._configure_transceiver()
             _LOGGER.debug(
