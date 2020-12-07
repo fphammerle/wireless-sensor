@@ -5,6 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/fphammerle/wireless-sensor/badge.svg?branch=master)](https://coveralls.io/github/fphammerle/wireless-sensor?branch=master)
 [![Last Release](https://img.shields.io/pypi/v/wireless-sensor.svg)](https://pypi.org/project/wireless-sensor/#history)
 [![Compatible Python Versions](https://img.shields.io/pypi/pyversions/wireless-sensor.svg)](https://pypi.org/project/wireless-sensor/)
+[![DOI](https://zenodo.org/badge/319298583.svg)](https://zenodo.org/badge/latestdoi/319298583)
 
 Command-line tool & python library to receive & decode signals of FT017TH wireless thermo/hygrometers
 
