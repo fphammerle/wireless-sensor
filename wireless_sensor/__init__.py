@@ -21,6 +21,7 @@ import datetime
 import logging
 import math
 import struct
+import sys
 import time
 import typing
 
@@ -39,6 +40,12 @@ class DecodeError(ValueError):
     pass
 
 
+def _now_local() -> datetime.datetime:  # pragma: no cover
+    if sys.version_info < (3, 6):
+        return datetime.datetime.now(tz=datetime.timezone.utc).astimezone()
+    return datetime.datetime.now().astimezone()
+
+
 class FT017TH:
 
     # pylint: disable=too-few-public-methods
@@ -51,7 +58,7 @@ class FT017TH:
         assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
             raise DecodeError("invalid prefix in message: {}".format(bits))
-        temperature_index, = struct.unpack(
+        (temperature_index,) = struct.unpack(
             ">H", numpy.packbits(bits[32:44])  # , bitorder="big")
         )
         # advertised range: [-40°C, +60°C]
@@ -63,7 +70,7 @@ class FT017TH:
         # intercept: 0%
         # slope estimated with statsmodels.regression.linear_model.OLS
         # 12 bits have sufficient range: 2**12 * slope / 2**4 + 0 = 1.27
-        relative_humidity_index, = struct.unpack(
+        (relative_humidity_index,) = struct.unpack(
             ">H", numpy.packbits(bits[44:56])  # , bitorder="big")
         )
         relative_humidity = relative_humidity_index / 51451.432435
@@ -75,7 +82,7 @@ class FT017TH:
             bits[56:],  # checksum?
         )
         return _Measurement(
-            decoding_timestamp=datetime.datetime.now().astimezone(),  # local timezone
+            decoding_timestamp=_now_local(),
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
         )
@@ -119,7 +126,7 @@ class FT017TH:
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
     def _receive_packet(
-        self
+        self,
     ) -> typing.Optional[
         cc1101._ReceivedPacket  # pylint: disable=protected-access; version pinned
     ]:
