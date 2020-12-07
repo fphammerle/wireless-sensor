@@ -133,5 +133,7 @@ class FT017TH:
                                 self._SYNC_WORD + packet.data, dtype=numpy.uint8
                             )
                         )
-                    except ValueError:
-                        _LOGGER.info("failed to decode %s", packet)
+                    except ValueError as exc:
+                        _LOGGER.info(
+                            "failed to decode %s: %s", packet, str(exc), exc_info=exc
+                        )

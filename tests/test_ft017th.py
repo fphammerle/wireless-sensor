@@ -1,6 +1,7 @@
 import datetime
-import unittest.mock
+import logging
 import queue
+import unittest.mock
 
 import cc1101
 import numpy
@@ -124,3 +125,41 @@ def test_receive():
             sensor, "_parse_transmission", return_value="dummy2"
         ):
             assert next(measurement_iter) == "dummy2"
+
+
+def test_receive_failed_to_decode(caplog):
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    measurement_iter = sensor.receive()
+    with unittest.mock.patch.object(
+        sensor,
+        "_receive_packet",
+        return_value=cc1101._ReceivedPacket(
+            data=b"\0", rssi_index=0, checksum_valid=True, link_quality_indicator=0
+        ),
+    ) as receive_packet_mock, unittest.mock.patch.object(
+        sensor,
+        "_parse_transmission",
+        side_effect=[
+            ValueError("dummy error 0"),
+            ValueError("dummy error 1"),
+            "dummy measurement",
+        ],
+    ) as parse_transmission_mock, caplog.at_level(
+        logging.INFO
+    ):
+        assert next(measurement_iter) == "dummy measurement"
+    assert receive_packet_mock.call_count == 3
+    assert parse_transmission_mock.call_count == 3
+    decode_error_log_records = [
+        (r.message, r.exc_info[1])
+        for r in caplog.records
+        if r.name == "wireless_sensor" and r.funcName == "receive"
+    ]
+    assert len(decode_error_log_records) == 2
+    for error_index in range(2):
+        assert decode_error_log_records[error_index][0] == (
+            "failed to decode _ReceivedPacket(RSSI -74dBm, 0x00): "
+            + "dummy error {}".format(error_index)
+        )
+        assert isinstance(decode_error_log_records[error_index][1], ValueError)
