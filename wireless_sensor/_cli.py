@@ -6,7 +6,7 @@ import wireless_sensor
 
 def _receive():
     argparser = argparse.ArgumentParser(
-        description="Receive & decode signals sent by FT017TH thermo/hygrometer"
+        description="Receive & decode signals of FT017TH thermo/hygrometers"
     )
     argparser.add_argument("--debug", action="store_true")
     args = argparser.parse_args()
