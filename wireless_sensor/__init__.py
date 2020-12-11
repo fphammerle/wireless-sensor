@@ -120,7 +120,7 @@ class FT017TH:
         self._transceiver = cc1101.CC1101(lock_spi_device=True)
         self._transmission_length_bytes = math.ceil(
             self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8
-        ) - len(self._SYNC_WORD)
+        )
 
     def _configure_transceiver(self):
         self._transceiver.set_base_frequency_hertz(433.945e6)
@@ -133,7 +133,9 @@ class FT017TH:
         self._transceiver.disable_checksum()
         self._transceiver.enable_manchester_code()
         self._transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
-        self._transceiver.set_packet_length_bytes(self._transmission_length_bytes)
+        self._transceiver.set_packet_length_bytes(
+            self._transmission_length_bytes - len(self._SYNC_WORD)
+        )
         # pylint: disable=protected-access; version pinned
         self._transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 

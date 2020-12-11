@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
-- lock SPI device file
+- acquire `flock` on SPI device file
 - attribute `FT017TH.transceiver` is now private
 
 ### Added
