@@ -113,8 +113,8 @@ class FT017TH:
         unlock_spi_device:
             If True, flock on SPI device file /dev/spidev0.0
             will be released after configuring the transceiver.
-            Useful if another process accesses the transceiver
-            simultaneously to send transmissions.
+            Useful if another process (infrequently) accesses
+            the transceiver simultaneously.
         """
         self._unlock_spi_device = unlock_spi_device
         self._transceiver = cc1101.CC1101(lock_spi_device=True)

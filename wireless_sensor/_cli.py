@@ -25,6 +25,12 @@ def _receive():
     argparser = argparse.ArgumentParser(
         description="Receive & decode signals of FT017TH thermo/hygrometers"
     )
+    argparser.add_argument(
+        "--unlock-spi-device",
+        action="store_true",
+        help="Release flock from SPI device file after configuring the transceiver."
+        " Useful if another process (infrequently) accesses the transceiver simultaneously.",
+    )
     argparser.add_argument("--debug", action="store_true")
     args = argparser.parse_args()
     logging.basicConfig(
@@ -33,7 +39,8 @@ def _receive():
         datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
     logging.getLogger("cc1101").setLevel(logging.INFO)
-    for measurement in wireless_sensor.FT017TH().receive():
+    sensor = wireless_sensor.FT017TH(unlock_spi_device=args.unlock_spi_device)
+    for measurement in sensor.receive():
         print(
             "{:%Y-%m-%dT%H:%M:%S%z}\t{:.01f}°C\t{:.01f}%".format(
                 measurement.decoding_timestamp,

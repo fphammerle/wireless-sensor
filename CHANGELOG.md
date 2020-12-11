@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - attribute `FT017TH.transceiver` is now private
 
 ### Added
-- added option `FT017TH(unlock_spi_device=True)` to release `flock`
-  on the SPI device file after configuring the transceiver
+- added option `FT017TH(unlock_spi_device=True)` / `--unlock-spi-device`
+  to release the `flock` from the SPI device file after configuring the transceiver
 
 ### Fixed
 - reconfigure receiver after receiving a packet with unexpected length

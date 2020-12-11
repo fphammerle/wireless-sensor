@@ -28,11 +28,20 @@ import wireless_sensor._cli
 
 
 @pytest.mark.parametrize(
-    ("argv", "root_log_level"), [([""], logging.INFO), (["", "--debug"], logging.DEBUG)]
+    ("argv", "root_log_level", "unlock_spi_device"),
+    [
+        ([""], logging.INFO, False),
+        (["", "--debug"], logging.DEBUG, False),
+        (["", "--unlock-spi-device"], logging.INFO, True),
+        (["", "--unlock-spi-device", "--debug"], logging.DEBUG, True),
+    ],
 )
-def test__receive(capsys, argv, root_log_level):
-    with unittest.mock.patch("wireless_sensor.FT017TH") as sensor_class_mock:
-        sensor_class_mock().receive.return_value = [
+def test__receive(capsys, argv, root_log_level, unlock_spi_device):
+    with unittest.mock.patch(
+        "wireless_sensor.FT017TH.__init__", return_value=None
+    ) as init_mock, unittest.mock.patch(
+        "wireless_sensor.FT017TH.receive",
+        return_value=[
             wireless_sensor.Measurement(
                 decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 0),
                 temperature_degrees_celsius=24.1234,
@@ -48,7 +57,8 @@ def test__receive(capsys, argv, root_log_level):
                 temperature_degrees_celsius=21.1234,
                 relative_humidity=0.61234,
             ),
-        ]
+        ],
+    ):
         with unittest.mock.patch("sys.argv", argv), unittest.mock.patch(
             "logging.basicConfig"
         ) as logging_basic_config_mock:
@@ -56,6 +66,7 @@ def test__receive(capsys, argv, root_log_level):
     assert logging_basic_config_mock.call_count == 1
     assert logging_basic_config_mock.call_args[1]["level"] == root_log_level
     assert logging.getLogger("cc1101").getEffectiveLevel() == logging.INFO
+    init_mock.assert_called_once_with(unlock_spi_device=unlock_spi_device)
     out, err = capsys.readouterr()
     assert not err
     assert out == (
