@@ -109,41 +109,41 @@ class FT017TH:
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
     def __init__(self):
-        self.transceiver = cc1101.CC1101(lock_spi_device=True)
+        self._transceiver = cc1101.CC1101(lock_spi_device=True)
         self._transmission_length_bytes = math.ceil(
             self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8
         ) - len(self._SYNC_WORD)
 
     def _configure_transceiver(self):
-        self.transceiver.set_base_frequency_hertz(433.945e6)
-        self.transceiver.set_symbol_rate_baud(2048)
-        self.transceiver.set_sync_mode(
+        self._transceiver.set_base_frequency_hertz(433.945e6)
+        self._transceiver.set_symbol_rate_baud(2048)
+        self._transceiver.set_sync_mode(
             cc1101.SyncMode.TRANSMIT_16_MATCH_15_BITS,
             _carrier_sense_threshold_enabled=True,
         )
-        self.transceiver.set_sync_word(self._SYNC_WORD)
-        self.transceiver.disable_checksum()
-        self.transceiver.enable_manchester_code()
-        self.transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
-        self.transceiver.set_packet_length_bytes(self._transmission_length_bytes)
+        self._transceiver.set_sync_word(self._SYNC_WORD)
+        self._transceiver.disable_checksum()
+        self._transceiver.enable_manchester_code()
+        self._transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
+        self._transceiver.set_packet_length_bytes(self._transmission_length_bytes)
         # pylint: disable=protected-access; version pinned
-        self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
+        self._transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
     def _receive_packet(
         self,
     ) -> typing.Optional[
         cc1101._ReceivedPacket  # pylint: disable=protected-access; version pinned
     ]:
-        self.transceiver._enable_receive_mode()  # pylint: disable=protected-access; version pinned
+        self._transceiver._enable_receive_mode()  # pylint: disable=protected-access; version pinned
         time.sleep(0.05)
         while (
-            self.transceiver.get_marc_state()
+            self._transceiver.get_marc_state()
             == cc1101.MainRadioControlStateMachineState.RX
         ):
             time.sleep(8.0)  # transmits approx once per minute
         return (
             # pylint: disable=protected-access; version pinned
-            self.transceiver._get_received_packet()
+            self._transceiver._get_received_packet()
         )
 
     def _receive_measurement(self) -> typing.Optional[Measurement]:
@@ -166,13 +166,13 @@ class FT017TH:
         lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
         while True:
             try:
-                with self.transceiver:
+                with self._transceiver:
                     self._configure_transceiver()
                     _LOGGER.debug(
                         "%s, filter_bandwidth=%.0fkHz",
-                        self.transceiver,
+                        self._transceiver,
                         # pylint: disable=protected-access; version pinned
-                        self.transceiver._get_filter_bandwidth_hertz() / 1000,
+                        self._transceiver._get_filter_bandwidth_hertz() / 1000,
                     )
                     while True:
                         measurement = self._receive_measurement()

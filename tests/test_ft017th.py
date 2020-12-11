@@ -113,18 +113,18 @@ def test__receive_packet():
     with unittest.mock.patch("cc1101.CC1101"):
         sensor = wireless_sensor.FT017TH()
     with unittest.mock.patch("time.sleep") as sleep_mock:
-        sensor.transceiver.get_marc_state.side_effect = (
+        sensor._transceiver.get_marc_state.side_effect = (
             lambda: cc1101.MainRadioControlStateMachineState.RX
             if sum(a[0] for a, _ in sleep_mock.call_args_list) < 16
             else cc1101.MainRadioControlStateMachineState.IDLE
         )
-        sensor.transceiver._get_received_packet.side_effect = (
+        sensor._transceiver._get_received_packet.side_effect = (
             lambda: "fail"
             if sum(a[0] for a, _ in sleep_mock.call_args_list) < 16
             else "dummy"
         )
         packet = sensor._receive_packet()
-    sensor.transceiver._enable_receive_mode.assert_called_once_with()  # pylint: disable=no-member; false positive
+    sensor._transceiver._enable_receive_mode.assert_called_once_with()  # pylint: disable=no-member; false positive
     assert sleep_mock.call_args_list == [
         unittest.mock.call(0.05),
         unittest.mock.call(8.0),
@@ -168,7 +168,7 @@ def test_receive():
             sensor, "_parse_transmission", return_value="dummy"
         ) as parse_transmission_mock:
             assert next(measurement_iter) == "dummy"
-        sensor.transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
+        sensor._transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
         assert receive_packet_mock.call_count == 3
         assert parse_transmission_mock.call_count == 1
         (
@@ -249,7 +249,7 @@ def test_receive_unexpected_packet_length(caplog):
         assert next(sensor.receive()) == measurement
     assert (
         # pylint: disable=no-member; false positive
-        sensor.transceiver.__enter__.call_count
+        sensor._transceiver.__enter__.call_count
         == 1 + 2
     )
     assert (
@@ -275,13 +275,13 @@ def test_receive_locked(caplog):
         relative_humidity=42.0,
     )
     with unittest.mock.patch.object(
-        sensor.transceiver,
+        sensor._transceiver,
         "__enter__",
         side_effect=[
             BlockingIOError,
             BlockingIOError,
             BlockingIOError,
-            sensor.transceiver,
+            sensor._transceiver,
         ],
     ) as enter_mock, unittest.mock.patch.object(
         sensor, "_receive_measurement", return_value=measurement
@@ -319,7 +319,7 @@ def test_receive_no_reconfiguring(caplog):
             assert next(measurement_iter) == measurement
     assert (
         # pylint: disable=no-member; false positive
-        sensor.transceiver.__enter__.call_count
+        sensor._transceiver.__enter__.call_count
         == 1
     )
     assert not caplog.record_tuples
