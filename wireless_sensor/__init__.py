@@ -108,7 +108,15 @@ class FT017TH:
 
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
-    def __init__(self):
+    def __init__(self, unlock_spi_device: bool = False):
+        """
+        unlock_spi_device:
+            If True, flock on SPI device file /dev/spidev0.0
+            will be released after configuring the transceiver.
+            Useful if another process accesses the transceiver
+            simultaneously to send transmissions.
+        """
+        self._unlock_spi_device = unlock_spi_device
         self._transceiver = cc1101.CC1101(lock_spi_device=True)
         self._transmission_length_bytes = math.ceil(
             self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8
@@ -174,6 +182,9 @@ class FT017TH:
                         # pylint: disable=protected-access; version pinned
                         self._transceiver._get_filter_bandwidth_hertz() / 1000,
                     )
+                    if self._unlock_spi_device:
+                        self._transceiver.unlock_spi_device()
+                        _LOGGER.debug("unlocked SPI device")
                     while True:
                         measurement = self._receive_measurement()
                         if measurement:

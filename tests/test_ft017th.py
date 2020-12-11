@@ -185,6 +185,8 @@ def test_receive():
             sensor, "_parse_transmission", return_value="dummy2"
         ):
             assert next(measurement_iter) == "dummy2"
+    # pylint: disable=no-member; false positive
+    sensor._transceiver.unlock_spi_device.assert_not_called()
 
 
 def test_receive_failed_to_decode(caplog):
@@ -323,3 +325,27 @@ def test_receive_no_reconfiguring(caplog):
         == 1
     )
     assert not caplog.record_tuples
+
+
+def test_receive_unlock_spi_device(caplog):
+    with unittest.mock.patch("cc1101.CC1101") as transceiver_class_mock:
+        sensor = wireless_sensor.FT017TH(unlock_spi_device=True)
+    transceiver_class_mock.assert_called_once_with(lock_spi_device=True)
+    measurement = wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime.now(),
+        temperature_degrees_celsius=21.0,
+        relative_humidity=42.0,
+    )
+    with unittest.mock.patch.object(
+        sensor, "_receive_measurement", return_value=measurement
+    ), caplog.at_level(logging.DEBUG):
+        measurement_iter = sensor.receive()
+        for _ in range(3):
+            assert next(measurement_iter) == measurement
+    transceiver_class_mock().unlock_spi_device.assert_called_once_with()
+    assert len(caplog.records) == 2
+    assert caplog.record_tuples[1] == (
+        "wireless_sensor",
+        logging.DEBUG,
+        "unlocked SPI device",
+    )
