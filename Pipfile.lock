@@ -18,10 +18,10 @@
     "default": {
         "cc1101": {
             "hashes": [
-                "sha256:3ad5045d7d2d4904c323f18bc682b586eb0035b7df0524c7f2bf8fe47b9baa21",
-                "sha256:a3b88311a25361bcf6ab5dff13d56f950162250ebe1e06bdbb1224597a59c263"
+                "sha256:9e18bb555ab438b39ab68ae348ec86e657e8771f1d6bebb7bc4659ceec59b27c",
+                "sha256:c6283bb260ef501dc49daff48eb3742cc7924369769a82b23e19221f5d15eff3"
             ],
-            "version": "==2.3.0rc0"
+            "version": "==2.3.0"
         },
         "numpy": {
             "hashes": [
