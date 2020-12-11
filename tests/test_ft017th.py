@@ -133,12 +133,28 @@ def test__receive_packet():
     assert packet == "dummy"
 
 
+def test__receive_measurement_unexpected_length():
+    sensor = wireless_sensor.FT017TH()
+    with unittest.mock.patch.object(
+        sensor,
+        "_receive_packet",
+        return_value=cc1101._ReceivedPacket(
+            data=b"\xff" * 17,
+            rssi_index=0,
+            checksum_valid=True,
+            link_quality_indicator=0,
+        ),
+    ):
+        with pytest.raises(wireless_sensor._UnexpectedPacketLengthError):
+            sensor._receive_measurement()
+
+
 def test_receive():
     with unittest.mock.patch("cc1101.CC1101"):
         sensor = wireless_sensor.FT017TH()
     measurement_iter = sensor.receive()
     packet = cc1101._ReceivedPacket(
-        data=b"\0", rssi_index=0, checksum_valid=True, link_quality_indicator=0
+        data=b"\0" * 21, rssi_index=0, checksum_valid=True, link_quality_indicator=0
     )
     with unittest.mock.patch.object(sensor, "_receive_packet") as receive_packet_mock:
         packet_queue = queue.Queue()
@@ -162,7 +178,8 @@ def test_receive():
         assert not parse_transmission_kwargs
         assert len(parse_transmission_args) == 1
         assert numpy.array_equal(
-            parse_transmission_args[0], numpy.array([255, 168, 0], dtype=numpy.uint8)
+            parse_transmission_args[0],
+            numpy.array([255, 168] + [0] * 21, dtype=numpy.uint8),
         )
         with unittest.mock.patch.object(
             sensor, "_parse_transmission", return_value="dummy2"
@@ -178,7 +195,7 @@ def test_receive_failed_to_decode(caplog):
         sensor,
         "_receive_packet",
         return_value=cc1101._ReceivedPacket(
-            data=b"\0", rssi_index=0, checksum_valid=True, link_quality_indicator=0
+            data=b"\0" * 21, rssi_index=0, checksum_valid=True, link_quality_indicator=0
         ),
     ) as receive_packet_mock, unittest.mock.patch.object(
         sensor,
@@ -197,14 +214,112 @@ def test_receive_failed_to_decode(caplog):
     decode_error_log_records = [
         (r.message, r.exc_info[1])
         for r in caplog.records
-        if r.name == "wireless_sensor" and r.funcName == "receive" and r.exc_info
+        if r.name == "wireless_sensor"
+        and r.funcName == "_receive_measurement"
+        and r.exc_info
     ]
     assert len(decode_error_log_records) == 2
     for error_index in range(2):
         assert decode_error_log_records[error_index][0] == (
-            "failed to decode _ReceivedPacket(RSSI -74dBm, 0x00): "
+            "failed to decode _ReceivedPacket(RSSI -74dBm, 0x{}): ".format("00" * 21)
             + "dummy error {}".format(error_index)
         )
         assert isinstance(
             decode_error_log_records[error_index][1], wireless_sensor.DecodeError
         )
+
+
+def test_receive_unexpected_packet_length(caplog):
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    measurement = wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime.now(),
+        temperature_degrees_celsius=21.0,
+        relative_humidity=42.0,
+    )
+    with unittest.mock.patch.object(
+        sensor,
+        "_receive_measurement",
+        side_effect=[
+            wireless_sensor._UnexpectedPacketLengthError,
+            wireless_sensor._UnexpectedPacketLengthError,
+            measurement,
+        ],
+    ), caplog.at_level(logging.INFO):
+        assert next(sensor.receive()) == measurement
+    assert (
+        # pylint: disable=no-member; false positive
+        sensor.transceiver.__enter__.call_count
+        == 1 + 2
+    )
+    assert (
+        caplog.record_tuples
+        == [
+            (
+                "wireless_sensor",
+                logging.INFO,
+                "unexpected packet length; "
+                "reconfiguring as transceiver was potentially accessed by another process",
+            )
+        ]
+        * 2
+    )
+
+
+def test_receive_locked(caplog):
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    measurement = wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime.now(),
+        temperature_degrees_celsius=21.0,
+        relative_humidity=42.0,
+    )
+    with unittest.mock.patch.object(
+        sensor.transceiver,
+        "__enter__",
+        side_effect=[
+            BlockingIOError,
+            BlockingIOError,
+            BlockingIOError,
+            sensor.transceiver,
+        ],
+    ) as enter_mock, unittest.mock.patch.object(
+        sensor, "_receive_measurement", return_value=measurement
+    ), unittest.mock.patch(
+        "time.sleep"
+    ) as sleep_mock, caplog.at_level(
+        logging.INFO
+    ):
+        assert next(sensor.receive()) == measurement
+    assert enter_mock.call_count == 4
+    assert sleep_mock.call_args_list == [unittest.mock.call(s) for s in [2, 4, 8]]
+    assert caplog.record_tuples == [
+        (
+            "wireless_sensor",
+            logging.INFO,
+            "SPI device locked, waiting {} seconds".format(seconds),
+        )
+        for seconds in [2, 4, 8]
+    ]
+
+
+def test_receive_no_reconfiguring(caplog):
+    with unittest.mock.patch("cc1101.CC1101"):
+        sensor = wireless_sensor.FT017TH()
+    measurement = wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime.now(),
+        temperature_degrees_celsius=21.0,
+        relative_humidity=42.0,
+    )
+    with unittest.mock.patch.object(
+        sensor, "_receive_measurement", return_value=measurement
+    ), caplog.at_level(logging.INFO):
+        measurement_iter = sensor.receive()
+        for _ in range(3):
+            assert next(measurement_iter) == measurement
+    assert (
+        # pylint: disable=no-member; false positive
+        sensor.transceiver.__enter__.call_count
+        == 1
+    )
+    assert not caplog.record_tuples

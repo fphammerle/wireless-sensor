@@ -36,6 +36,10 @@ Measurement = collections.namedtuple(
 )
 
 
+class _UnexpectedPacketLengthError(ValueError):
+    pass
+
+
 class DecodeError(ValueError):
     pass
 
@@ -105,7 +109,10 @@ class FT017TH:
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
     def __init__(self):
-        self.transceiver = cc1101.CC1101()
+        self.transceiver = cc1101.CC1101(lock_spi_device=True)
+        self._transmission_length_bytes = math.ceil(
+            self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8
+        ) - len(self._SYNC_WORD)
 
     def _configure_transceiver(self):
         self.transceiver.set_base_frequency_hertz(433.945e6)
@@ -118,10 +125,7 @@ class FT017TH:
         self.transceiver.disable_checksum()
         self.transceiver.enable_manchester_code()
         self.transceiver.set_packet_length_mode(cc1101.PacketLengthMode.FIXED)
-        self.transceiver.set_packet_length_bytes(
-            math.ceil(self._MESSAGE_LENGTH_BITS * self._MESSAGE_REPEATS / 8)
-            - len(self._SYNC_WORD)
-        )
+        self.transceiver.set_packet_length_bytes(self._transmission_length_bytes)
         # pylint: disable=protected-access; version pinned
         self.transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
@@ -142,26 +146,45 @@ class FT017TH:
             self.transceiver._get_received_packet()
         )
 
+    def _receive_measurement(self) -> typing.Optional[Measurement]:
+        packet = self._receive_packet()
+        if not packet:
+            return None
+        signal = numpy.frombuffer(self._SYNC_WORD + packet.data, dtype=numpy.uint8)
+        if signal.shape != (self._transmission_length_bytes,):
+            raise _UnexpectedPacketLengthError()
+        try:
+            return self._parse_transmission(signal)
+        except DecodeError as exc:
+            _LOGGER.debug("failed to decode %s: %s", packet, str(exc), exc_info=exc)
+        return None
+
+    _LOCK_WAIT_START_SECONDS = 2
+    _LOCK_WAIT_FACTOR = 2
+
     def receive(self) -> typing.Iterator[Measurement]:
-        with self.transceiver:
-            self._configure_transceiver()
-            _LOGGER.debug(
-                "%s, filter_bandwidth=%.0fkHz",
-                self.transceiver,
-                # pylint: disable=protected-access; version pinned
-                self.transceiver._get_filter_bandwidth_hertz() / 1000,
-            )
-            while True:
-                packet = self._receive_packet()
-                if packet:
-                    _LOGGER.debug("%s", packet)
-                    try:
-                        yield self._parse_transmission(
-                            numpy.frombuffer(
-                                self._SYNC_WORD + packet.data, dtype=numpy.uint8
-                            )
-                        )
-                    except DecodeError as exc:
-                        _LOGGER.debug(
-                            "failed to decode %s: %s", packet, str(exc), exc_info=exc
-                        )
+        lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
+        while True:
+            try:
+                with self.transceiver:
+                    self._configure_transceiver()
+                    _LOGGER.debug(
+                        "%s, filter_bandwidth=%.0fkHz",
+                        self.transceiver,
+                        # pylint: disable=protected-access; version pinned
+                        self.transceiver._get_filter_bandwidth_hertz() / 1000,
+                    )
+                    while True:
+                        measurement = self._receive_measurement()
+                        if measurement:
+                            yield measurement
+                            lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
+            except _UnexpectedPacketLengthError:
+                _LOGGER.info(
+                    "unexpected packet length;"
+                    " reconfiguring as transceiver was potentially accessed by another process"
+                )
+            except BlockingIOError:
+                _LOGGER.info("SPI device locked, waiting %d seconds", lock_wait_seconds)
+                time.sleep(lock_wait_seconds)
+                lock_wait_seconds *= self._LOCK_WAIT_FACTOR
