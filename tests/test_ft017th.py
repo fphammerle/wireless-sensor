@@ -339,7 +339,7 @@ def test_receive_locked(caplog):
     ) as enter_mock, unittest.mock.patch.object(
         sensor, "_receive_measurement", return_value=measurement
     ), unittest.mock.patch(
-        "time.sleep",
+        "time.sleep"
     ) as sleep_mock, caplog.at_level(
         logging.INFO
     ):
