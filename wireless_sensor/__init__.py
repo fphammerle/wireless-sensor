@@ -108,14 +108,18 @@ class FT017TH:
 
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
-    def __init__(self, unlock_spi_device: bool = False):
+    def __init__(self, gdo0_gpio_line_name: bytes, unlock_spi_device: bool = False):
         """
+        gdo0_gpio_line_name:
+            Name of GPIO pin that CC1101's GDO0 pin is connected to.
+            Run command `gpioinfo` to get a list of all available GPIO lines.
         unlock_spi_device:
             If True, flock on SPI device file /dev/spidev0.0
             will be released after configuring the transceiver.
             Useful if another process (infrequently) accesses
             the transceiver simultaneously.
         """
+        self._gdo0_gpio_line_name = gdo0_gpio_line_name
         self._unlock_spi_device = unlock_spi_device
         self._transceiver = cc1101.CC1101(lock_spi_device=True)
         self._transmission_length_bytes = math.ceil(
@@ -139,28 +143,18 @@ class FT017TH:
         # pylint: disable=protected-access; version pinned
         self._transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
-    def _receive_packet(
-        self,
-    ) -> typing.Optional[
-        cc1101._ReceivedPacket  # pylint: disable=protected-access; version pinned
-    ]:
-        self._transceiver._enable_receive_mode()  # pylint: disable=protected-access; version pinned
-        time.sleep(0.05)
-        while (
-            self._transceiver.get_marc_state()
-            == cc1101.MainRadioControlStateMachineState.RX
-        ):
-            time.sleep(8.0)  # transmits approx once per minute
-        return (
-            # pylint: disable=protected-access; version pinned
-            self._transceiver._get_received_packet()
+    def _receive_measurement(
+        self, timeout_seconds: int
+    ) -> typing.Optional[Measurement]:
+        # pylint: disable=protected-access; version pinned
+        packet = self._transceiver._wait_for_packet(
+            timeout_seconds=timeout_seconds,
+            gdo0_gpio_line_name=self._gdo0_gpio_line_name,
         )
-
-    def _receive_measurement(self) -> typing.Optional[Measurement]:
-        packet = self._receive_packet()
         if not packet:
+            _LOGGER.debug("timeout or fetching packet failed")
             return None
-        signal = numpy.frombuffer(self._SYNC_WORD + packet.data, dtype=numpy.uint8)
+        signal = numpy.frombuffer(self._SYNC_WORD + packet.payload, dtype=numpy.uint8)
         if signal.shape != (self._transmission_length_bytes,):
             raise _UnexpectedPacketLengthError()
         try:
@@ -172,7 +166,16 @@ class FT017TH:
     _LOCK_WAIT_START_SECONDS = 2
     _LOCK_WAIT_FACTOR = 2
 
-    def receive(self) -> typing.Iterator[Measurement]:
+    @staticmethod
+    def _sleep(duration_seconds: int, yield_interval: int) -> typing.Iterator[None]:
+        wait_end_time = time.time() + duration_seconds
+        while time.time() < wait_end_time:
+            yield None
+            time.sleep(min(yield_interval, max(0, wait_end_time - time.time())))
+
+    def receive(
+        self, timeout_seconds: int
+    ) -> typing.Iterator[typing.Optional[Measurement]]:
         lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
         while True:
             try:
@@ -188,16 +191,24 @@ class FT017TH:
                         self._transceiver.unlock_spi_device()
                         _LOGGER.debug("unlocked SPI device")
                     while True:
-                        measurement = self._receive_measurement()
+                        time.sleep(1)  # protect against package flood
+                        measurement = self._receive_measurement(
+                            timeout_seconds=max(timeout_seconds - 1, 1)
+                        )
+                        # forward None on timeout or error instead of blocking thread.
+                        # caller may want to run periodic tasks.
+                        yield measurement
                         if measurement:
-                            yield measurement
                             lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
             except _UnexpectedPacketLengthError:
                 _LOGGER.info(
                     "unexpected packet length;"
                     " reconfiguring as transceiver was potentially accessed by another process"
                 )
+                yield None
             except BlockingIOError:
                 _LOGGER.info("SPI device locked, waiting %d seconds", lock_wait_seconds)
-                time.sleep(lock_wait_seconds)
+                yield from self._sleep(
+                    duration_seconds=lock_wait_seconds, yield_interval=timeout_seconds
+                )
                 lock_wait_seconds *= self._LOCK_WAIT_FACTOR

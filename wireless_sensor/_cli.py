@@ -26,6 +26,16 @@ def _receive():
         description="Receive & decode signals of FT017TH thermo/hygrometers"
     )
     argparser.add_argument(
+        "--gdo0-gpio-line-name",
+        type=str,
+        # GPIO24 recommended at
+        # https://github.com/fphammerle/python-cc1101/tree/v2.7.3#wiring-raspberry-pi
+        default="GPIO24",
+        help="Name of GPIO pin that CC1101's GDO0 pin is connected to."
+        " Run command `gpioinfo` to get a list of all available GPIO lines."
+        " Default: %(default)s",
+    )
+    argparser.add_argument(
         "--unlock-spi-device",
         action="store_true",
         help="Release flock from SPI device file after configuring the transceiver."
@@ -39,8 +49,11 @@ def _receive():
         datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
     logging.getLogger("cc1101").setLevel(logging.INFO)
-    sensor = wireless_sensor.FT017TH(unlock_spi_device=args.unlock_spi_device)
-    for measurement in sensor.receive():
+    sensor = wireless_sensor.FT017TH(
+        gdo0_gpio_line_name=args.gdo0_gpio_line_name.encode(),
+        unlock_spi_device=args.unlock_spi_device,
+    )
+    for measurement in filter(None, sensor.receive(timeout_seconds=60 * 60 * 24)):
         print(
             "{:%Y-%m-%dT%H:%M:%S%z}\t{:.01f}°C\t{:.01f}%".format(
                 measurement.decoding_timestamp,

@@ -28,15 +28,16 @@ import wireless_sensor._cli
 
 
 @pytest.mark.parametrize(
-    ("argv", "root_log_level", "unlock_spi_device"),
+    ("argv", "root_log_level", "unlock_spi_device", "gdo0_gpio_line_name"),
     [
-        ([""], logging.INFO, False),
-        (["", "--debug"], logging.DEBUG, False),
-        (["", "--unlock-spi-device"], logging.INFO, True),
-        (["", "--unlock-spi-device", "--debug"], logging.DEBUG, True),
+        ([""], logging.INFO, False, b"GPIO24"),
+        (["", "--debug"], logging.DEBUG, False, b"GPIO24"),
+        (["", "--unlock-spi-device"], logging.INFO, True, b"GPIO24"),
+        (["", "--unlock-spi-device", "--debug"], logging.DEBUG, True, b"GPIO24"),
+        (["", "--gdo0-gpio-line-name", "GPIO25"], logging.INFO, False, b"GPIO25"),
     ],
 )
-def test__receive(capsys, argv, root_log_level, unlock_spi_device):
+def test__receive(capsys, argv, root_log_level, unlock_spi_device, gdo0_gpio_line_name):
     with unittest.mock.patch(
         "wireless_sensor.FT017TH.__init__", return_value=None
     ) as init_mock, unittest.mock.patch(
@@ -52,6 +53,7 @@ def test__receive(capsys, argv, root_log_level, unlock_spi_device):
                 temperature_degrees_celsius=22.42,
                 relative_humidity=0.55123,
             ),
+            None,  # timeout or error
             wireless_sensor.Measurement(
                 decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 1, 41),
                 temperature_degrees_celsius=21.1234,
@@ -66,7 +68,10 @@ def test__receive(capsys, argv, root_log_level, unlock_spi_device):
     assert logging_basic_config_mock.call_count == 1
     assert logging_basic_config_mock.call_args[1]["level"] == root_log_level
     assert logging.getLogger("cc1101").getEffectiveLevel() == logging.INFO
-    init_mock.assert_called_once_with(unlock_spi_device=unlock_spi_device)
+    init_mock.assert_called_once_with(
+        gdo0_gpio_line_name=gdo0_gpio_line_name,
+        unlock_spi_device=unlock_spi_device,
+    )
     out, err = capsys.readouterr()
     assert not err
     assert out == (

@@ -71,10 +71,7 @@ setuptools.setup(
         # https://docs.scipy.org/doc/numpy-1.16.0/reference/generated/numpy.packbits.html?highlight=packbits#numpy.packbits
         "numpy>=1.17.0,<2",
         # pinning exact version due to use of unstable receive api
-        # https://github.com/fphammerle/python-cc1101/compare/v2.1.0...v2.2.0a0#diff-319c0dd5b99765f9ec51a25fd100c899d6ce5009b654bd0763090f157a791a67R70
-        # lower constraint 2.3.0 for locking api
-        # https://github.com/fphammerle/python-cc1101/compare/v2.2.0...v2.3.0rc0#diff-319c0dd5b99765f9ec51a25fd100c899d6ce5009b654bd0763090f157a791a67R142
-        "cc1101==2.3.0",
+        "cc1101==2.7.3",
     ],
     setup_requires=["setuptools_scm"],
     tests_require=["pytest"],

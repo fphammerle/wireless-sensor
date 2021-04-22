@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- `FT017TH.receive`: use edge detection on CC1101's `GDO0` pin to detect arrival of packages
+  (instead of polling)
+- command `wireless-sensor-receive`: added parameter `--gdo0-gpio-line-name` (default: `GPIO24`)
+- `FT017TH.receive`: yield `None` on error or timeout to allow caller to perform periodic tasks
+  (instead of blocking thread until valid packet arrives)
 
 ## [0.3.0] - 2020-12-11
 ### Changed

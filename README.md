@@ -13,7 +13,7 @@ Command-line tool & python library to receive & decode signals of FT017TH wirele
 
 * [FT017TH](https://github.com/fphammerle/FT017TH-wireless-thermometer-hygrometer-signal#product-details) sensor
 * [CC1101 transceiver](https://www.ti.com/product/CC1101)
-* Linux machine with CC1101 connected to SPI port
+* Linux machine with CC1101 connected to SPI port & `GDO0` connected to some GPIO pin
   ([wiring instructions](https://github.com/fphammerle/python-cc1101#wiring-raspberry-pi)
   for raspberry pi)
 
@@ -39,8 +39,10 @@ $ wireless-sensor-receive
 ```python
 import wireless_sensor
 
-sensor = wireless_sensor.FT017TH()
-for measurement in sensor.receive():
+sensor = wireless_sensor.FT017TH(gdo0_gpio_line_name=b'GPIO24')
+for measurement in sensor.receive(timeout_seconds=600):
+    if not measurement:
+        print("invalid packet or timeout")
     print(
         measurement.decoding_timestamp,
         measurement.temperature_degrees_celsius,
