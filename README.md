@@ -43,6 +43,7 @@ sensor = wireless_sensor.FT017TH(gdo0_gpio_line_name=b'GPIO24')
 for measurement in sensor.receive(timeout_seconds=600):
     if not measurement:
         print("invalid packet or timeout")
+        continue
     print(
         measurement.decoding_timestamp,
         measurement.temperature_degrees_celsius,
