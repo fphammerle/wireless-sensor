@@ -44,12 +44,6 @@ class DecodeError(ValueError):
     pass
 
 
-def _now_local() -> datetime.datetime:  # pragma: no cover
-    if sys.version_info < (3, 6):
-        return datetime.datetime.now(tz=datetime.timezone.utc).astimezone()
-    return datetime.datetime.now().astimezone()
-
-
 class FT017TH:
 
     # pylint: disable=too-few-public-methods
@@ -86,7 +80,7 @@ class FT017TH:
             bits[56:],  # checksum?
         )
         return Measurement(
-            decoding_timestamp=_now_local(),
+            decoding_timestamp=datetime.datetime.now().astimezone(),
             temperature_degrees_celsius=temperature_degrees_celsius,
             relative_humidity=relative_humidity,
         )

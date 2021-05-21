@@ -1,6 +1,5 @@
 [MESSAGE CONTROL]
 
-disable=bad-continuation, # black
-        missing-class-docstring,
+disable=missing-class-docstring,
         missing-function-docstring,
         missing-module-docstring

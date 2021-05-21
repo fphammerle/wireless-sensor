@@ -86,8 +86,7 @@ def test__parse_transmission(signal, message_bits):
         wireless_sensor.FT017TH._parse_transmission(
             numpy.frombuffer(signal, dtype=numpy.uint8)
         )
-    # .assert_called_once() was added in python3.6
-    assert parse_message_mock.call_count == 1
+    parse_message_mock.assert_called_once()
     args, kwargs = parse_message_mock.call_args
     assert not kwargs
     assert len(args) == 1
@@ -171,7 +170,7 @@ def test_receive():
         assert sleep_mock.call_count == 3
         sensor._transceiver.__enter__.assert_called_once_with()  # pylint: disable=no-member; false positive
         assert wait_for_packet_mock.call_count == 3
-        assert parse_transmission_mock.call_count == 1
+        parse_transmission_mock.assert_called_once()
         (
             parse_transmission_args,
             parse_transmission_kwargs,
@@ -290,9 +289,9 @@ def test__sleep_single(duration_seconds):
     )
     with unittest.mock.patch("time.sleep") as sleep_mock:
         assert next(itr) is None
-        assert sleep_mock.call_count == 0
+        sleep_mock.assert_not_called()
         assert next(itr) is None
-        assert sleep_mock.call_count == 1
+        sleep_mock.assert_called_once()
         args, kwargs = sleep_mock.call_args
         assert len(args) == 1
         assert args[0] == pytest.approx(duration_seconds, abs=0.1)
@@ -308,13 +307,11 @@ def test__sleep_multiple():
         ):
             assert item is None
             if idx == 0:
-                assert sleep_mock.call_count == 0
+                sleep_mock.assert_not_called()
             else:
-                assert sleep_mock.call_count == 1
                 sleep_mock.assert_called_once_with(7)
                 sleep_mock.reset_mock()
     assert idx + 1 == 3  # pylint: disable=undefined-loop-variable
-    assert sleep_mock.call_count == 1
     sleep_mock.assert_called_once_with(2)
 
 
@@ -344,9 +341,9 @@ def test_receive_locked(caplog):
         logging.INFO
     ):
         assert next(measurement_iter) is None  # 1st BlockingIOError
-        assert sleep_mock.call_count == 0
+        sleep_mock.assert_not_called()
         assert next(measurement_iter) is None  # 1st BlockingIOError
-        assert sleep_mock.call_count == 1
+        sleep_mock.assert_called_once()
         assert sleep_mock.call_args[0][0] == pytest.approx(2, abs=0.01)
         sleep_mock.reset_mock()
         with unittest.mock.patch("time.time", return_value=time.time() + 3):

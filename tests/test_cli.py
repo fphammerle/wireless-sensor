@@ -65,7 +65,7 @@ def test__receive(capsys, argv, root_log_level, unlock_spi_device, gdo0_gpio_lin
             "logging.basicConfig"
         ) as logging_basic_config_mock:
             wireless_sensor._cli._receive()
-    assert logging_basic_config_mock.call_count == 1
+    logging_basic_config_mock.assert_called_once()
     assert logging_basic_config_mock.call_args[1]["level"] == root_log_level
     assert logging.getLogger("cc1101").getEffectiveLevel() == logging.INFO
     init_mock.assert_called_once_with(
