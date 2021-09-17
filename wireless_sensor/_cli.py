@@ -55,9 +55,7 @@ def _receive():
     )
     for measurement in filter(None, sensor.receive(timeout_seconds=60 * 60 * 24)):
         print(
-            "{:%Y-%m-%dT%H:%M:%S%z}\t{:.01f}°C\t{:.01f}%".format(
-                measurement.decoding_timestamp,
-                measurement.temperature_degrees_celsius,
-                measurement.relative_humidity * 100,
-            )
+            f"{measurement.decoding_timestamp:%Y-%m-%dT%H:%M:%S%z}"
+            f"\t{measurement.temperature_degrees_celsius:.01f}°C"
+            f"\t{(measurement.relative_humidity * 100):.01f}%"
         )

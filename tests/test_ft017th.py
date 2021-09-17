@@ -233,8 +233,8 @@ def test_receive_failed_to_decode(caplog):
     assert len(decode_error_log_records) == 2
     for error_index in range(2):
         assert decode_error_log_records[error_index][0] == (
-            "failed to decode _ReceivedPacket(RSSI -74dBm, 0x{}): ".format("00" * 23)
-            + "dummy error {}".format(error_index)
+            f"failed to decode _ReceivedPacket(RSSI -74dBm, 0x{'00' * 23}): "
+            f"dummy error {error_index}"
         )
         assert isinstance(
             decode_error_log_records[error_index][1], wireless_sensor.DecodeError
@@ -370,7 +370,7 @@ def test_receive_locked(caplog):
         (
             "wireless_sensor",
             logging.INFO,
-            "SPI device locked, waiting {} seconds".format(seconds),
+            f"SPI device locked, waiting {seconds} seconds",
         )
         for seconds in [2, 4, 8, 2]
     ]
