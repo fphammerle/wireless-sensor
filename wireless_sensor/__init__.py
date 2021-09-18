@@ -55,7 +55,7 @@ class FT017TH:
     def _parse_message(cls, bits) -> Measurement:
         assert bits.shape == (cls._MESSAGE_LENGTH_BITS,), bits.shape
         if (bits[:8] != 1).any():
-            raise DecodeError("invalid prefix in message: {}".format(bits))
+            raise DecodeError(f"invalid prefix in message: {bits}")
         (temperature_index,) = struct.unpack(
             ">H", numpy.packbits(bits[32:44])  # , bitorder="big")
         )
