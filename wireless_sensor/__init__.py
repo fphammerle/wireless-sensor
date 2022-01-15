@@ -30,10 +30,11 @@ import numpy
 
 _LOGGER = logging.getLogger(__name__)
 
-Measurement = collections.namedtuple(
-    "Measurement",
-    ["decoding_timestamp", "temperature_degrees_celsius", "relative_humidity"],
-)
+
+class Measurement(typing.NamedTuple):
+    decoding_timestamp: datetime.datetime
+    temperature_degrees_celsius: float
+    relative_humidity: float  # [0, 1]
 
 
 class _UnexpectedPacketLengthError(ValueError):

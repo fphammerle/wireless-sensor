@@ -49,23 +49,23 @@ setuptools.setup(
     ],
     classifiers=[
         # https://pypi.org/classifiers/
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: End Users/Desktop",
         "Intended Audience :: System Administrators",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
         "Operating System :: POSIX :: Linux",
         # .github/workflows/python.yml
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Home Automation",
         "Topic :: Utilities",
     ],
     entry_points={
         "console_scripts": ["wireless-sensor-receive = wireless_sensor._cli:_receive"]
     },
-    python_requires=">=3.6",
+    python_requires=">=3.7",  # python<3.7 untested
     install_requires=[
         # >=1.17.0 for numpy.packbits's bitorder arg
         # https://docs.scipy.org/doc/numpy-1.16.0/reference/generated/numpy.packbits.html?highlight=packbits#numpy.packbits
