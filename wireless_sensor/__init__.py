@@ -46,7 +46,6 @@ class DecodeError(ValueError):
 
 
 class FT017TH:
-
     # pylint: disable=too-few-public-methods
 
     _MESSAGE_LENGTH_BITS = 65
