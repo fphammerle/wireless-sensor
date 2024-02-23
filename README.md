@@ -2,7 +2,7 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![CI Pipeline Status](https://github.com/fphammerle/wireless-sensor/workflows/tests/badge.svg)](https://github.com/fphammerle/wireless-sensor/actions)
-[![Coverage Status](https://coveralls.io/repos/github/fphammerle/wireless-sensor/badge.svg?branch=master)](https://coveralls.io/github/fphammerle/wireless-sensor?branch=master)
+![Coverage Status](https://ipfs.io/ipfs/QmP8k5H4MkfspFxQxdL2kEZ4QQWQjF8xwPYD35KvNH4CA6/20230429T090002+0200/s3.amazonaws.com/assets.coveralls.io/badges/coveralls_100.svg)
 [![Last Release](https://img.shields.io/pypi/v/wireless-sensor.svg)](https://pypi.org/project/wireless-sensor/#history)
 [![Compatible Python Versions](https://img.shields.io/pypi/pyversions/wireless-sensor.svg)](https://pypi.org/project/wireless-sensor/)
 [![DOI](https://zenodo.org/badge/319298583.svg)](https://zenodo.org/badge/latestdoi/319298583)
