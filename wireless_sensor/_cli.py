@@ -15,10 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import asyncio
 import argparse
 import logging
 
 import wireless_sensor
+
+
+async def _print_measurements(sensor: wireless_sensor.FT017TH) -> None:
+    async for measurement in sensor.receive(timeout_seconds=60 * 60):
+        print(
+            f"{measurement.decoding_timestamp:%Y-%m-%dT%H:%M:%S%z}"
+            f"\t{measurement.temperature_degrees_celsius:.01f}°C"
+            f"\t{(measurement.relative_humidity * 100):.01f}%"
+        )
 
 
 def _receive():
@@ -53,9 +63,5 @@ def _receive():
         gdo0_gpio_line_name=args.gdo0_gpio_line_name.encode(),
         unlock_spi_device=args.unlock_spi_device,
     )
-    for measurement in filter(None, sensor.receive(timeout_seconds=60 * 60 * 24)):
-        print(
-            f"{measurement.decoding_timestamp:%Y-%m-%dT%H:%M:%S%z}"
-            f"\t{measurement.temperature_degrees_celsius:.01f}°C"
-            f"\t{(measurement.relative_humidity * 100):.01f}%"
-        )
+    asyncio.run(_print_measurements(sensor))
+    print("timeout")

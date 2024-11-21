@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import abc
+import asyncio
 import collections
 import datetime
 import logging
@@ -98,7 +99,7 @@ class FT017TH:
             repeats_bits[0], repeats_bits[2]
         ):
             return cls._parse_message(repeats_bits[0])
-        raise DecodeError("repeats do not match")
+        raise DecodeError("repeats do not match")  # occurs approx every 5 sec
 
     _SYNC_WORD = bytes([255, 168])  # 168 might be sender-specific
 
@@ -140,6 +141,7 @@ class FT017TH:
     def _receive_measurement(
         self, timeout_seconds: int
     ) -> typing.Optional[Measurement]:
+        # blocks in gpiod_line_request_rising_edge_events.
         # pylint: disable=protected-access; version pinned
         packet = self._transceiver._wait_for_packet(
             timeout_seconds=timeout_seconds,
@@ -160,18 +162,11 @@ class FT017TH:
     _LOCK_WAIT_START_SECONDS = 2
     _LOCK_WAIT_FACTOR = 2
 
-    @staticmethod
-    def _sleep(duration_seconds: int, yield_interval: int) -> typing.Iterator[None]:
-        wait_end_time = time.time() + duration_seconds
-        while time.time() < wait_end_time:
-            yield None
-            time.sleep(min(yield_interval, max(0, wait_end_time - time.time())))
-
-    def receive(
-        self, timeout_seconds: int
-    ) -> typing.Iterator[typing.Optional[Measurement]]:
+    async def receive(self, timeout_seconds: int) -> typing.AsyncIterator[Measurement]:
         lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
-        while True:
+        assert timeout_seconds >= 1, "expecting timeout ≥ 1 sec"
+        timeout = time.time() + timeout_seconds
+        while time.time() < timeout:
             try:
                 with self._transceiver:
                     self._configure_transceiver()
@@ -184,25 +179,23 @@ class FT017TH:
                     if self._unlock_spi_device:
                         self._transceiver.unlock_spi_device()
                         _LOGGER.debug("unlocked SPI device")
-                    while True:
-                        time.sleep(1)  # protect against package flood
+                    while time.time() < timeout:
+                        await asyncio.sleep(1)  # protect against package flood
                         measurement = self._receive_measurement(
-                            timeout_seconds=max(timeout_seconds - 1, 1)
+                            timeout_seconds=max(int(timeout - time.time()), 1)
                         )
-                        # forward None on timeout or error instead of blocking thread.
-                        # caller may want to run periodic tasks.
-                        yield measurement
-                        if measurement:
+                        if measurement:  # "repeats do not match" error every ≈5 sec
+                            yield measurement
+                            timeout = time.time() + timeout_seconds
                             lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
             except _UnexpectedPacketLengthError:
                 _LOGGER.info(
                     "unexpected packet length;"
                     " reconfiguring as transceiver was potentially accessed by another process"
                 )
-                yield None
+                await asyncio.sleep(1)
             except BlockingIOError:
                 _LOGGER.info("SPI device locked, waiting %d seconds", lock_wait_seconds)
-                yield from self._sleep(
-                    duration_seconds=lock_wait_seconds, yield_interval=timeout_seconds
-                )
+                await asyncio.sleep(lock_wait_seconds)
                 lock_wait_seconds *= self._LOCK_WAIT_FACTOR
+        _LOGGER.warning("timeout waiting for packet")

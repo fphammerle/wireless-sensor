@@ -17,6 +17,7 @@
 
 import datetime
 import logging
+import typing
 import unittest.mock
 
 import pytest
@@ -25,6 +26,28 @@ import wireless_sensor
 import wireless_sensor._cli
 
 # pylint: disable=protected-access
+
+
+async def _receive_mock(
+    sensor: wireless_sensor.FT017TH, timeout_seconds: int
+) -> typing.AsyncIterator[wireless_sensor.Measurement]:
+    assert isinstance(sensor, wireless_sensor.FT017TH)
+    assert timeout_seconds == 3600
+    yield wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 0),
+        temperature_degrees_celsius=24.1234,
+        relative_humidity=0.51234,
+    )
+    yield wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 50),
+        temperature_degrees_celsius=22.42,
+        relative_humidity=0.55123,
+    )
+    yield wireless_sensor.Measurement(
+        decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 1, 41),
+        temperature_degrees_celsius=21.1234,
+        relative_humidity=0.61234,
+    )
 
 
 @pytest.mark.parametrize(
@@ -41,25 +64,7 @@ def test__receive(capsys, argv, root_log_level, unlock_spi_device, gdo0_gpio_lin
     with unittest.mock.patch(
         "wireless_sensor.FT017TH.__init__", return_value=None
     ) as init_mock, unittest.mock.patch(
-        "wireless_sensor.FT017TH.receive",
-        return_value=[
-            wireless_sensor.Measurement(
-                decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 0),
-                temperature_degrees_celsius=24.1234,
-                relative_humidity=0.51234,
-            ),
-            wireless_sensor.Measurement(
-                decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 0, 50),
-                temperature_degrees_celsius=22.42,
-                relative_humidity=0.55123,
-            ),
-            None,  # timeout or error
-            wireless_sensor.Measurement(
-                decoding_timestamp=datetime.datetime(2020, 12, 7, 10, 1, 41),
-                temperature_degrees_celsius=21.1234,
-                relative_humidity=0.61234,
-            ),
-        ],
+        "wireless_sensor.FT017TH.receive", _receive_mock
     ):
         with unittest.mock.patch("sys.argv", argv), unittest.mock.patch(
             "logging.basicConfig"
@@ -78,4 +83,5 @@ def test__receive(capsys, argv, root_log_level, unlock_spi_device, gdo0_gpio_lin
         "2020-12-07T10:00:00\t24.1°C\t51.2%\n"
         "2020-12-07T10:00:50\t22.4°C\t55.1%\n"
         "2020-12-07T10:01:41\t21.1°C\t61.2%\n"
+        "timeout\n"
     )

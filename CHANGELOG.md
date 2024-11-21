@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added attribute type hints to `Measurement` class
 - declare compatibility with `python3.11`
 
+### Changed
+- method `FT017TH.receive`
+  - now async
+  - quits after `timeout_seconds` without valid packet
+  - `gpiod_line_request_rising_edge_events` (within `cc1101` library) blocks
+    thread for up to `timeout_seconds`
+  - no longer yields `None`
+- command `wireless-sensor-receive`: timeout after one hour without valid packet
+
 ### Removed
 - compatibility with `python3.5`, `python3.6`, `python3.7` & `python3.8`
 

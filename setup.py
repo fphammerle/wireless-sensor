@@ -73,5 +73,5 @@ setuptools.setup(
         "cc1101==2.7.3",
     ],
     setup_requires=["setuptools_scm"],
-    tests_require=["pytest"],
+    tests_require=["pytest", "pytest-asyncio"],
 )
