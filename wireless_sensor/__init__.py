@@ -57,7 +57,7 @@ class FT017TH:
         if (bits[:8] != 1).any():
             raise DecodeError(f"invalid prefix in message: {bits}")
         (temperature_index,) = struct.unpack(
-            ">H", numpy.packbits(bits[32:44])  # , bitorder="big")
+            ">H", numpy.packbits(bits[32:44]).tobytes()  # , bitorder="big")
         )
         # advertised range: [-40°C, +60°C]
         # intercept: -40°C = -40°F
@@ -69,7 +69,7 @@ class FT017TH:
         # slope estimated with statsmodels.regression.linear_model.OLS
         # 12 bits have sufficient range: 2**12 * slope / 2**4 + 0 = 1.27
         (relative_humidity_index,) = struct.unpack(
-            ">H", numpy.packbits(bits[44:56])  # , bitorder="big")
+            ">H", numpy.packbits(bits[44:56]).tobytes()  # , bitorder="big")
         )
         relative_humidity = relative_humidity_index / 51451.432435
         _LOGGER.debug(

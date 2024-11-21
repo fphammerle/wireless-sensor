@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added attribute type hints to `Measurement` class
 
 ### Removed
-- compatibility with `python3.5`, `python3.6` & `python3.7`
+- compatibility with `python3.5`, `python3.6`, `python3.7` & `python3.8`
 
 ## [0.4.0] - 2021-04-22
 ### Changed
