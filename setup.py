@@ -57,6 +57,7 @@ setuptools.setup(
         # .github/workflows/python.yml
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Home Automation",
         "Topic :: Utilities",
     ],
