@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.0.0] - 2024-11-22
 ### Added
 - added attribute type hints to `Measurement` class
 - declare compatibility with `python3.11`
@@ -56,7 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   temperature & humidity measurements received from FT017TH sensor
 - script `wireless-sensor-receive`
 
-[Unreleased]: https://github.com/fphammerle/wireless-sensor/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/fphammerle/wireless-sensor/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/fphammerle/wireless-sensor/compare/v0.4.0...v1.0.0
 [0.4.0]: https://github.com/fphammerle/wireless-sensor/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/fphammerle/wireless-sensor/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/fphammerle/wireless-sensor/compare/v0.1.1...v0.2.0
