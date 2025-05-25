@@ -72,6 +72,5 @@ setuptools.setup(
         # pinning exact version due to use of unstable receive api
         "cc1101==2.7.3",
     ],
-    setup_requires=["setuptools_scm"],
     tests_require=["pytest", "pytest-asyncio"],
 )
