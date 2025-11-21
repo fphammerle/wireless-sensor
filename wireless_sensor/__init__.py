@@ -18,6 +18,7 @@
 import abc
 import asyncio
 import collections
+import collections.abc
 import datetime
 import logging
 import math
@@ -138,9 +139,7 @@ class FT017TH:
         # pylint: disable=protected-access; version pinned
         self._transceiver._set_filter_bandwidth(mantissa=3, exponent=3)
 
-    def _receive_measurement(
-        self, timeout_seconds: int
-    ) -> typing.Optional[Measurement]:
+    def _receive_measurement(self, timeout_seconds: int) -> Measurement | None:
         # blocks in gpiod_line_request_rising_edge_events.
         # pylint: disable=protected-access; version pinned
         packet = self._transceiver._wait_for_packet(
@@ -162,7 +161,9 @@ class FT017TH:
     _LOCK_WAIT_START_SECONDS = 2
     _LOCK_WAIT_FACTOR = 2
 
-    async def receive(self, timeout_seconds: int) -> typing.AsyncIterator[Measurement]:
+    async def receive(
+        self, timeout_seconds: int
+    ) -> collections.abc.AsyncIterator[Measurement]:
         lock_wait_seconds = self._LOCK_WAIT_START_SECONDS
         assert timeout_seconds >= 1, "expecting timeout ≥ 1 sec"
         timeout = time.time() + timeout_seconds

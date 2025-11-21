@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import collections.abc
 import datetime
 import logging
-import typing
 import unittest.mock
 
 import pytest
@@ -30,7 +30,7 @@ import wireless_sensor._cli
 
 async def _receive_mock(
     sensor: wireless_sensor.FT017TH, timeout_seconds: int
-) -> typing.AsyncIterator[wireless_sensor.Measurement]:
+) -> collections.abc.AsyncIterator[wireless_sensor.Measurement]:
     assert isinstance(sensor, wireless_sensor.FT017TH)
     assert timeout_seconds == 3600
     yield wireless_sensor.Measurement(
